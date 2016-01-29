@@ -1,0 +1,47 @@
+{
+	 'allow_host'=[],
+	'deny_host'=[],
+	'model'='allow',
+	'top_switch_ip'='',
+	'get_port_timeout'=[5, 60, 10],
+
+	"switch_list" : [
+        {
+            "ip" : "192.168.1.1",
+            "type" : "cisco",
+            "number" : 1,
+            "user" : "",
+            "password" : "admin"
+        },
+        {
+            "ip" : "192.168.1.2",
+            "type" : "juniper",
+            "number" : 2,
+            "user" : "",
+            "password" : "admin"
+        }
+	],
+	"line_list" : [
+        {
+            "switch" : {"start" : "192.168.1.1", "end" : "192.168.1.2"},
+            "port" : {"start" : 1, "end" : 0}
+        }
+	],
+	"detail_list" : [
+        {
+            "switch" : "192.168.1.1",
+            "map" : [
+                { "port" : 2, "detail" : "A PC" },
+                { "port" : 3, "detail" : "B PC" },
+            ]
+        },
+        {
+            "switch" : "192.168.1.2",
+            "map" : [
+                { "port" : 1, "detail" : "C PC" },
+                { "port" : 2, "detail" : "D PC" },
+            ]
+        }
+	]
+}
+
