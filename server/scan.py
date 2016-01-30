@@ -3,7 +3,6 @@
 import datetime, telnetlib, re, os, time, sys, traceback, thread, threading, Queue, io, json, pprint, logging
 from multiprocessing import Pool
 from json import JSONEncoder
-from cStringIO import StringIO
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -153,20 +152,15 @@ class IP :
             l.append(IP(i))
         return l
 
-class IpData(JSONEncoder) :
-    def __init__(self, ip, someData) :
+class IpData(threading.Thread) :
+    def __init__(self, ip, someData=None) :
+        super(IpData, self).__init__()
         self.ip=ip
         if isinstance(self.ip, unicode) :
             self.ip=self.ip.encode('utf8')
         self.data=dict()
-        for d in someData.keys() :
-            value=someData[d]
-            if isinstance(value, unicode) :
-                value=value.encode('utf8')
-            self.data.update({d:value})
 
     def __str__(self, separ='default') :
-        buf=StringIO()
         li=self.__list()
         me=list()
         if separ=='default' :
@@ -176,26 +170,20 @@ class IpData(JSONEncoder) :
                 if t :
                     me.append(': ')
                 else :
-                    me.append(' ')
+                    me.append(', ')
                 t=not t
         else :
             for l in li :
                 me.append(l)
                 me.append(separ)
         return ''.join(me)
-        '''
-        for l in self.__list() :
-            if not isinstance(l[1], unicode) :
-                print 'l[1]: ', l[1]
-                l[1]=unicode(l[1], 'utf8')
-            if separ=='default' :
-                me=[l[0], ': ', l[1], ' ']
-            else :
-                me=[l[0], separ, l[1], separ]
-            for m in me :
-                buf.write(m)
-        return buf.getvalue()
-        '''
+
+    def __addData(self, someData) :
+        for d in someData.keys() :
+            value=someData[d]
+            if isinstance(value, unicode) :
+                value=value.encode('utf8')
+            self.data.update({d:value})
 
     def getData(self, para) :
         if para=='ip' :
@@ -218,8 +206,23 @@ class IpData(JSONEncoder) :
             li.extend(item)
         return li
 
-    def default(self) :
-        return __dict__
+    #################################################################
+    # Search
+    def updateNetwork(self, networkDatabase) :
+        di=networkDatabase.search(self.ip)
+        if di :
+            self.__addData(di)
+
+    def run(self) :
+        if self.networkDatabase :
+            self.updateNetwork(self.networkDatabase)
+        else :
+            raise Exception('please set networkDatabase')
+        print self.__str__()
+
+class MyEncoder(JSONEncoder):
+    def default(self, o):
+        return o.__dict__
 
 class Format :
     @staticmethod
@@ -404,11 +407,11 @@ class AddressTable(Login) :
 
     #############################################################################################
     def getPort(self, ip, mac) :
-        m=mac.getMac()
+        m=mac
         while True :
             port=self.table.get(m)
             if port :
-                return int(port)
+                return port
             self.cond.acquire()
             port=self.table.get(m)
             get_port_timeout=self.setting['get_port_timeout']
@@ -422,8 +425,8 @@ class AddressTable(Login) :
             time.sleep(get_port_timeout[2])
 
     def __rescue(self, ip) :
-        logging.info('start up rescue ability with '+str(self.time)+' times for '+ip.getIp()+' about '+self.host)
-        cmd='ping '+ip.getIp()+"> /dev/null 2> /dev/null "
+        logging.info('start up rescue ability with '+str(self.time)+' times for '+ip+' about '+self.host)
+        cmd='ping '+ip+"> /dev/null 2> /dev/null "
         os.system(cmd)
 
 ###########################################################################
@@ -431,9 +434,6 @@ class MacPortTable :
     def __init__(self, setting) :
         self.select=dict()
         self.setting=setting
-        #self.line=list()
-        #for l in Line.objects.all() :
-        #    self.line.append([ l.upSwitch, l.upPort, l.downSwitch])
         self.switchList=set()
         for s in setting['switch_list'] :
             logging.debug('switch ip: '+s['ip']+' is Unicode type: '+isinstance(s['ip'], unicode).__str__())
@@ -448,7 +448,7 @@ class MacPortTable :
 
     def __getNext(self, ip, switch, port) :
         for l in self.setting['line_list'] :
-            if l['switch']['start']==switch and l['port']['start']==port and ip.getIp()!=l['switch']['end'] :
+            if l['switch']['start']==switch and l['port']['start']==port and ip!=l['switch']['end'] :
                 return l['switch']['end']
         return None
 
@@ -473,9 +473,11 @@ class MacPortTable :
         if nextSwitch :
             return self.__getSwitchPort(ip, mac, nextSwitch)
         else :
-            return host, port
+            return {'switch': host, 'port' : port}
 
-    def __getDetail(self, ip, switch, port) :
+    def __getDetail(self, ip, di) :
+        port=di['port']
+        switch=di['switch']
         if self.__isSwitch(ip) :
             return 'this is switch'
         if port==-1 :
@@ -487,181 +489,136 @@ class MacPortTable :
         return None
 
     def getSwitchPortDetail(self, ip, mac) :
-        switch, port=self.__getSwitchPort(ip, mac, self.setting['top_switch_ip'])
-        return switch, port, self.__getDetail(ip, switch, port)
+        di=self.__getSwitchPort(ip, mac, self.setting['top_switch_ip'])
+        detail=self.__getDetail(ip, di)
+        if detail :
+            di.update({'detail' : detail})
+        return di
 
 class Search(threading.Thread) :
     def __init__(self, ip, table, macTable, database, model='search', local25=Local.getIp(25), local26=Local.getIp(26), lock=None) :
-        super(Search, self).__init__()
         self.ip=ip
-        self.table=table
-        self.macTable=macTable
         self.database=database
         self.model=model
         self.local25=local25.getNumber()
         self.local26=local26.getNumber()
         self.lock=lock
 
+###########################################################################
+class Scanner :
+    def __init__(self) :
+        self.ipTable=list()
+        self.networkDatabase=NetworkDatabase()
+        self.database=Database()
+
+    #查詢指定網域的所有資料
+    #如果最前面的元素有寫的話就是指定此區段搜尋,如果沒有的話就是預設全部
+    #有指定的情況下可以指定搜尋從哪裡到哪裡,分別是後面兩個元素
+    def scan(self, start=IP(1), end=IP(506)) :
+        lock=threading.Lock()
+        for ip in IP.range(start, end) :
+            ipData=IpData(ip.getIp())
+            ipData.networkDatabase=self.networkDatabase
+            self.ipTable.append(ipData)
+        for thread in self.ipTable :
+            thread.start()
+        for thread in self.ipTable :
+            thread.join()
+
+##########################################################################
+class NetworkDatabase(object) :
+    def __init__(self) :
+        self.local25=Local.getIp(25).getNumber()
+        self.local26=Local.getIp(26).getNumber()
+        self.setting=NetworkDatabase.loadSetFile()
+        self.macTable=dict()
+        self.table=MacPortTable(self.setting)
+
+    def __ipNumber(self, ip) :
+        if isinstance(ip, int) :
+            return ip
+        if isinstance(ip, str) :
+            return IP(ip).getIp()
+        else :
+            return ip.getNumber()
+
     #ping全部所在網域裡的IP,可以選擇範圍或是全部,並使用指令arp -a IP 查詢,取得mac碼
     def __getMac(self, ip) :
-        ipnumber=ip.getNumber()
-        ipsection=ip.getSection()
-        if (ipsection==25 and ipnumber==self.local25) or (ipsection==26 and ipnumber==self.local26) :
+        ipnumber=self.__ipNumber(ip)
+        if ipnumber==self.local25 or ipnumber==self.local26 :
             return Local.getMac()
         else :
             pat=r"..:..:..:..:..:.."#以正規法的方式比較,找出符合的字串
-            cmd="ping -c 1 " + ip.getIp() + "> /dev/null 2> /dev/null "
+            cmd="ping -c 1 " + ip + "> /dev/null 2> /dev/null "
             os.system(cmd)
-            arpmsg=os.popen("arp -a " + ip.getIp()).read()
+            arpmsg=os.popen("arp -a " + ip).read()
             macpoint=re.search(pat,arpmsg)#拿取得的資料與正規表示法比較,找出符合的字串的第一組,並把位置存到macpoint裡
             if macpoint :
-                return MAC(macpoint.group())#轉換從re.search裡找到的位置換為字串並存到mac裡
+                return MAC(macpoint.group()).getMac()#轉換從re.search裡找到的位置換為字串並存到mac裡
             else :
                 return None
-
-    def __save(self, ip, mac=None, switch=None, port=None, detail=None) :
-        self.lock.acquire()
-        self.database.save(ip, mac, switch, port, detail)
-        '''
-        machine=Ip.objects.get(number=ip.getNumber())
-        if mac :
-            machine.activity=True
-            machine.mac=mac.getMac()
-            if switch :
-                machine.switch=switch
-            else :
-                machine.switch='N'
-            if port!=None :
-                machine.port=port
-            else :
-                machine.port=-1
-            if detail :
-                machine.detail=detail
-            else :
-                machine.detail='N'
-        else :
-            machine.activity=False
-            machine.mac='N'
-            machine.switch='N'
-            machine.port=-1
-            machine.detail='N'
-        try :
-            machine.save()
-            time.sleep(0.5)#Setting.database_save_delay
-        except :
-            logging.error('Scanner save error')
-        '''
-        self.lock.release()
-
-    def output(self, ip, mac=None, switch=None, port=None, detail=None) :
-        self.lock.acquire()
-        i=ip.getIp()
-        if mac :
-            m=mac.getMac(':')
-            s=switch
-            p=port
-            if detail :
-                d=detail
-            else :
-                d='N'
-        else :
-            m='N'
-            s='N'
-            p=-1
-            d='N'
-        logging.info('ip: '+i+'\tmac: '+m+'\tswitch: '+s+'\tport: '+str(p)+'\tdetail: '+d)
-        self.lock.release()
-        
-    def __ping(self, ip) :
-        mac=self.__getMac(ip)
-        if not mac :
-            self.macTable.pop(ip, 'not found')
-        else :
-            self.macTable.update({ ip:mac })
 
     #讀取mac與host登入遠端switch查詢,找出此mac所在的switch與port
     #回傳格式如 XX.XX.XX.XX, 7, None
     #@param  mac,host(如果沒有輸入host就是預設XX.XX.XX.XX
     #@return 所在的switch,port,詳細資料
-    def __search(self, ip) :
+    def search(self, ip) :
         mac=self.__getMac(ip)
         if not mac :
-            self.macTable.pop(ip.getIp(), 'not found')
-            if self.model=='save' :
-                self.__save(ip)
-            elif self.model=='search' :
-                self.output(ip)
+            self.macTable.pop(ip, 'not found')
+            return None
         else :
-            self.macTable.update({ ip.getIp():mac })
-            switch, port, detail=self.table.getSwitchPortDetail(ip, mac)
-            if self.model=='save' :
-                self.__save(ip, mac, switch, port, detail)
-            elif self.model=='search' :
-                self.output(ip, mac, switch, port, detail)
+            self.macTable.update({ ip:mac })
+            return self.table.getSwitchPortDetail(ip, mac)
 
-    #查詢指定網域的所有資料
-    #如果最前面的元素有寫的話就是指定此區段搜尋,如果沒有的話就是預設全部
-    #有指定的情況下可以指定搜尋從哪裡到哪裡,分別是後面兩個元素
-    def run(self) :
-        if self.model=='search' or self.model=='save' :
-            self.__search(self.ip)
-        elif self.model=='ping' :
-            self.__ping(self.ip)
-
-###########################################################################
-class Scanner :
-    def __init__(self, setting, database) :
-        self.threadPool=list()
-        self.macTable=dict()
-        self.table=MacPortTable(setting)
-        self.database=database
-
-    #查詢指定網域的所有資料
-    #如果最前面的元素有寫的話就是指定此區段搜尋,如果沒有的話就是預設全部
-    #有指定的情況下可以指定搜尋從哪裡到哪裡,分別是後面兩個元素
-    def scan(self, start=IP(1), end=IP(506), model='save') :
-        local25=Local.getIp(25)
-        local26=Local.getIp(26)
-        if model=='save' :
-            lock=threading.Lock()
-            for ip in IP.range(start, end) :
-                self.threadPool.append(Search(ip=ip, table=self.table, macTable=self.macTable, database=self.database, model='save', local25=local25, local26=local26, lock=lock))
-        elif model=='search' :
-            lock=threading.Lock()
-            for ip in IP.range(start, end) :
-                self.threadPool.append(Search(ip=ip, table=self.table, macTable=self.macTable, database=self.database, model='search', local25=local25, local26=local26, lock=lock))
+    @staticmethod
+    def loadSetFile() :
+        if os.path.isfile('setting/local.json') :
+            read=open('setting/local.json').read()
+            try :
+                setting=json.loads(read)
+            except :
+                logging.error('please check setting/local.json')
+                return None
+            return setting
         else :
-            raise Exception('model ERROR')
-        for thread in self.threadPool :
-            thread.start()
-        for thread in self.threadPool :
-            thread.join()
-
-    def getMacTable(self, start=IP(1), end=IP(506)) :
-        local25=Local.getIp(25)
-        local26=Local.getIp(26)
-        for ip in IP.range(start, end) :
-            self.threadPool.append(Search(ip=ip, table=self.table, macTable=self.macTable, database=self.database, model='ping' , local25=local25, local26=local26))
-        for thread in self.threadPool :
-            thread.start()
-        for thread in self.threadPool :
-            thread.join()
-        return self.macTable
+            logging.error('please new setting/local.json')
+            return None
 
 class Database(object) :
     def __init__(self) :
         logging.debug('Database init')
 
 
-    def save(self, ip, mac, switch, port, detail) :
+    def save(self, ip, di) :
         message='\tip: '+ip.__str__()
-        if mac :
-            message+='\tactivity: True\tmac: '+mac.__str__()+'\tswitch: '+switch+'\tport: '+str(port)
+        if 'mac' in di.keys() :
+            message+='\tactivity: True\tmac: '+di['mac']+'\tswitch: '+di['switch']+'\tport: '+di['port']
             if detail :
-                message+='\tdetail: '+detail
+                message+='\tdetail: '+di['detail']
         else :
             message+='\tactivity: False'
         logging.debug(message)
+
+    #        ip     site  hostname purpose admin   comment
+    @staticmethod
+    def loadOldFile(filename) :
+        li=list()
+        with io.open(filename, 'r', encoding='utf-8') as f :
+            for line in f.readlines() :
+                part=line.replace(u'　', '  ').replace('\t', '').split('|')
+
+                #http://taizilongxu.gitbooks.io/stackoverflow-about-python/content/72/README.html
+                di=dict()
+                p=['site', 'hostname', 'purpose', 'admin', 'comment']
+                for i in range(1, 7) :
+                    part[i]=part[i].strip()
+                for i in range(5) :
+                    if len(part[i+2])!=0 :
+                        di.update({p[i]: part[i+2]})
+                logging.info(part[1]+'|'+part[2]+'|'+part[3]+'|'+part[4]+'|'+part[5]+'|'+part[6])
+                li.append(IpData(part[1], di))
+        return li
 
 class Editor(object) :
     def __init__(self) :
@@ -669,24 +626,6 @@ class Editor(object) :
         filename='/home/kite/bash/web/mac/mysite/25table'
         self.scan(filename)
         #self.show(filename)
-
-    def scan(self, filename) :
-        
-        with io.open(filename, 'r', encoding='utf-8') as f :
-            for line in f.readlines() :
-                part=line.replace(u'　', '  ').replace('\t', '').split('|')
-
-                #http://taizilongxu.gitbooks.io/stackoverflow-about-python/content/72/README.html
-                logging.info(part[1].strip()+'|'+part[2].strip()+'|'+part[3].strip()+'|'+part[4].strip()+'|'+part[5].strip()+'|'+part[6].strip())
-                '''
-                machine=Ip.objects.get(ip=part[1].strip())
-                machine.site=part[2]
-                machine.hostname=part[4].strip()
-                machine.purpose=part[6].strip()
-                machine.admin=part[3].strip()
-                machine.comment=part[7].strip()
-                machine.save()
-                '''
 
     def show(self, filename) :
         #        ip     site  hostname purpose admin   comment
@@ -706,27 +645,6 @@ class Editor(object) :
         for t in table :
             mtable.append(max(t, key=len))
         logging.info(mtable)
-
-        #with io.open(filename, 'W+', encoding='utf-8') as f :
-
-        #for i in range(1,507) :
-            #print 
-
-def loadSetFile() :
-    if os.path.isfile('setting/local.json') :
-        read=open('setting/local.json').read()
-        try :
-            setting=json.loads(read)
-        except :
-            logging.error('please check setting/local.json')
-            sys.exit(0)
-        return setting
-def scan() :
-    setting=loadSetFile()
-    #pprint.pprint(setting)
-    database=Database()
-    scanner=Scanner(setting, database)
-    scanner.scan()
 
 def oldScan() :
     setting=loadSetFile()
@@ -757,32 +675,7 @@ def oldScan() :
 
     print ''
 
-    #        ip     site  hostname purpose admin   comment
-def loadOldFile(filename) :
-    li=list()
-    with io.open(filename, 'r', encoding='utf-8') as f :
-        for line in f.readlines() :
-            part=line.replace(u'　', '  ').replace('\t', '').split('|')
-
-            #http://taizilongxu.gitbooks.io/stackoverflow-about-python/content/72/README.html
-            di=dict()
-            p=['site', 'hostname', 'purpose', 'admin', 'comment']
-            for i in range(1, 7) :
-                part[i]=part[i].strip()
-            for i in range(5) :
-                if len(part[i+2])!=0 :
-                    di.update({p[i]: part[i+2]})
-            #logging.info(part[1]+'|'+part[2]+'|'+part[3]+'|'+part[4]+'|'+part[5]+'|'+part[6])
-            #li.append(IpData(part[1], {'site' : part[2], 'hostname' : part[3], 'purpose' : part[4], 'admin' : part[5], 'comment' : part[6]}))
-            li.append(IpData(part[1], di))
-    return li
-
-
 if __name__=='__main__' :
-    li=loadOldFile('./25table.txt')
-    for l in li :
-        print l
-    #pprint.pprint(json.dumps(li), default=default)
-    #scan()
-
+    scan=Scanner()
+    scan.scan()
 
