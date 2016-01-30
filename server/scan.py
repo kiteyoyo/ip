@@ -70,12 +70,34 @@ class IP :
         elif isinstance(i, unicode) :
             self.error=0
             self.number=self.__analytic(i.encode('utf-8'))
+        elif isinstance(i, IP) :
+            self.number=i.number
+            self.error=i.error
         else :
             raise Exception('IP input type error')
 
     def __str__(self) :
         return self.getIp()
 
+        '''
+    def __eq__(self, o) :
+        return self.number==o.number
+
+    def __ne__(self, o) :
+        return not self.__eq__(o)
+
+    def __le__(self, o) :
+        return self.number<=o.number
+
+    def __lt__(self, o) :
+        return self.number<o.number
+
+    def __ge__(self, o) :
+        return not self.__lt__(o)
+
+    def __gt__(self, o) :
+        return not self.__le__(o)
+        '''
     def __analytic(self, ip) :
         pat=r'.*\..*\..*\..*'
         if not re.search(pat, ip) :
@@ -155,9 +177,7 @@ class IP :
 class IpData(threading.Thread) :
     def __init__(self, ip, someData=None) :
         super(IpData, self).__init__()
-        self.ip=ip
-        if isinstance(self.ip, unicode) :
-            self.ip=self.ip.encode('utf8')
+        self.ip=IP(ip)
         self.data=dict()
 
     def __str__(self, separ='default') :
@@ -194,7 +214,7 @@ class IpData(threading.Thread) :
 
     def __list(self) :
         data=self.data.copy()
-        li=['ip', self.ip]
+        li=['ip', self.ip.__str__()]
         if 'mac' in data.keys() :
             for d in ['mac', 'switch', 'port'] :
                 li.extend([d, data[d]])
@@ -396,11 +416,11 @@ class AddressTable(Login) :
         for onematch in matchlist :
             splitmatch=onematch.split()
             if splitmatch[0]==self.compare :
-                mac=MAC(splitmatch[self.pick[0]]).getMac()
+                mac=MAC(splitmatch[self.pick[0]])
                 port=self.__analyticPort(splitmatch[self.pick[1]], self.host)
                 table.update({mac:port})
             else :
-                mac=MAC(splitmatch[self.pick[2]]).getMac()
+                mac=MAC(splitmatch[self.pick[2]])
                 port=self.__analyticPort(splitmatch[self.pick[3]], self.host)
                 table.update({mac:port})
         return table
@@ -425,8 +445,8 @@ class AddressTable(Login) :
             time.sleep(get_port_timeout[2])
 
     def __rescue(self, ip) :
-        logging.info('start up rescue ability with '+str(self.time)+' times for '+ip+' about '+self.host)
-        cmd='ping '+ip+"> /dev/null 2> /dev/null "
+        logging.info('start up rescue ability with '+str(self.time)+' times for '+ip.__str__()+' about '+self.host)
+        cmd='ping '+ip.__str__()+"> /dev/null 2> /dev/null "
         os.system(cmd)
 
 ###########################################################################
@@ -517,7 +537,7 @@ class Scanner :
     def scan(self, start=IP(1), end=IP(506)) :
         lock=threading.Lock()
         for ip in IP.range(start, end) :
-            ipData=IpData(ip.getIp())
+            ipData=IpData(ip)
             ipData.networkDatabase=self.networkDatabase
             self.ipTable.append(ipData)
         for thread in self.ipTable :
@@ -528,33 +548,24 @@ class Scanner :
 ##########################################################################
 class NetworkDatabase(object) :
     def __init__(self) :
-        self.local25=Local.getIp(25).getNumber()
-        self.local26=Local.getIp(26).getNumber()
+        self.local25=Local.getIp(25)
+        self.local26=Local.getIp(26)
         self.setting=NetworkDatabase.loadSetFile()
         self.macTable=dict()
         self.table=MacPortTable(self.setting)
 
-    def __ipNumber(self, ip) :
-        if isinstance(ip, int) :
-            return ip
-        if isinstance(ip, str) :
-            return IP(ip).getIp()
-        else :
-            return ip.getNumber()
-
     #ping全部所在網域裡的IP,可以選擇範圍或是全部,並使用指令arp -a IP 查詢,取得mac碼
     def __getMac(self, ip) :
-        ipnumber=self.__ipNumber(ip)
-        if ipnumber==self.local25 or ipnumber==self.local26 :
+        if ip==self.local25 or ip==self.local26 :
             return Local.getMac()
         else :
             pat=r"..:..:..:..:..:.."#以正規法的方式比較,找出符合的字串
-            cmd="ping -c 1 " + ip + "> /dev/null 2> /dev/null "
+            cmd="ping -c 1 " + ip.__str__() + "> /dev/null 2> /dev/null "
             os.system(cmd)
-            arpmsg=os.popen("arp -a " + ip).read()
+            arpmsg=os.popen("arp -a " + ip.__str__()).read()
             macpoint=re.search(pat,arpmsg)#拿取得的資料與正規表示法比較,找出符合的字串的第一組,並把位置存到macpoint裡
             if macpoint :
-                return MAC(macpoint.group()).getMac()#轉換從re.search裡找到的位置換為字串並存到mac裡
+                return MAC(macpoint.group())#轉換從re.search裡找到的位置換為字串並存到mac裡
             else :
                 return None
 
