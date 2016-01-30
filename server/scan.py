@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 import datetime, telnetlib, re, os, time, sys, traceback, thread, threading, Queue, io, json, pprint, logging
 from multiprocessing import Pool
+from json import JSONEncoder
+from cStringIO import StringIO
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -150,6 +152,74 @@ class IP :
         for i in range(s, e+1) :
             l.append(IP(i))
         return l
+
+class IpData(JSONEncoder) :
+    def __init__(self, ip, someData) :
+        self.ip=ip
+        if isinstance(self.ip, unicode) :
+            self.ip=self.ip.encode('utf8')
+        self.data=dict()
+        for d in someData.keys() :
+            value=someData[d]
+            if isinstance(value, unicode) :
+                value=value.encode('utf8')
+            self.data.update({d:value})
+
+    def __str__(self, separ='default') :
+        buf=StringIO()
+        li=self.__list()
+        me=list()
+        if separ=='default' :
+            t=True
+            for l in li :
+                me.append(l)
+                if t :
+                    me.append(': ')
+                else :
+                    me.append(' ')
+                t=not t
+        else :
+            for l in li :
+                me.append(l)
+                me.append(separ)
+        return ''.join(me)
+        '''
+        for l in self.__list() :
+            if not isinstance(l[1], unicode) :
+                print 'l[1]: ', l[1]
+                l[1]=unicode(l[1], 'utf8')
+            if separ=='default' :
+                me=[l[0], ': ', l[1], ' ']
+            else :
+                me=[l[0], separ, l[1], separ]
+            for m in me :
+                buf.write(m)
+        return buf.getvalue()
+        '''
+
+    def getData(self, para) :
+        if para=='ip' :
+            return self.ip
+        if para in self.data.keys() :
+            return self.data[para]
+        return None
+
+    def __list(self) :
+        data=self.data.copy()
+        li=['ip', self.ip]
+        if 'mac' in data.keys() :
+            for d in ['mac', 'switch', 'port'] :
+                li.extend([d, data[d]])
+                data.pop(d)
+            if 'detail' in data.keys() :
+                li.extend(['detail', data['detail']])
+                data.pop('detail')
+        for item in data.items() :
+            li.extend(item)
+        return li
+
+    def default(self) :
+        return __dict__
 
 class Format :
     @staticmethod
@@ -392,7 +462,7 @@ class MacPortTable :
         self.cond.acquire()
         table=self.select.get(host)
         if not table :
-            table=AddressTable(host, setting)
+            table=AddressTable(host, self.setting)
             self.select.update({host:table})
         self.cond.release()
         #try :
@@ -582,6 +652,7 @@ class Database(object) :
     def __init__(self) :
         logging.debug('Database init')
 
+
     def save(self, ip, mac, switch, port, detail) :
         message='\tip: '+ip.__str__()
         if mac :
@@ -589,7 +660,6 @@ class Database(object) :
             if detail :
                 message+='\tdetail: '+detail
         else :
-
             message+='\tactivity: False'
         logging.debug(message)
 
@@ -642,11 +712,7 @@ class Editor(object) :
         #for i in range(1,507) :
             #print 
 
-
-
-        
-
-if __name__=='__main__' :
+def loadSetFile() :
     if os.path.isfile('setting/local.json') :
         read=open('setting/local.json').read()
         try :
@@ -654,13 +720,16 @@ if __name__=='__main__' :
         except :
             logging.error('please check setting/local.json')
             sys.exit(0)
+        return setting
+def scan() :
+    setting=loadSetFile()
     #pprint.pprint(setting)
     database=Database()
     scanner=Scanner(setting, database)
     scanner.scan()
-    #edit=Editor()
 
-    '''
+def oldScan() :
+    setting=loadSetFile()
     network=Scanner(setting)
     t=time.time()
     error_message=[]
@@ -687,6 +756,33 @@ if __name__=='__main__' :
         print >> sys.stderr, ''
 
     print ''
-    '''
+
+    #        ip     site  hostname purpose admin   comment
+def loadOldFile(filename) :
+    li=list()
+    with io.open(filename, 'r', encoding='utf-8') as f :
+        for line in f.readlines() :
+            part=line.replace(u'　', '  ').replace('\t', '').split('|')
+
+            #http://taizilongxu.gitbooks.io/stackoverflow-about-python/content/72/README.html
+            di=dict()
+            p=['site', 'hostname', 'purpose', 'admin', 'comment']
+            for i in range(1, 7) :
+                part[i]=part[i].strip()
+            for i in range(5) :
+                if len(part[i+2])!=0 :
+                    di.update({p[i]: part[i+2]})
+            #logging.info(part[1]+'|'+part[2]+'|'+part[3]+'|'+part[4]+'|'+part[5]+'|'+part[6])
+            #li.append(IpData(part[1], {'site' : part[2], 'hostname' : part[3], 'purpose' : part[4], 'admin' : part[5], 'comment' : part[6]}))
+            li.append(IpData(part[1], di))
+    return li
+
+
+if __name__=='__main__' :
+    li=loadOldFile('./25table.txt')
+    for l in li :
+        print l
+    #pprint.pprint(json.dumps(li), default=default)
+    #scan()
 
 
