@@ -515,36 +515,6 @@ class MacPortTable :
             di.update({'detail' : detail})
         return di
 
-class Search(threading.Thread) :
-    def __init__(self, ip, table, macTable, database, model='search', local25=Local.getIp(25), local26=Local.getIp(26), lock=None) :
-        self.ip=ip
-        self.database=database
-        self.model=model
-        self.local25=local25.getNumber()
-        self.local26=local26.getNumber()
-        self.lock=lock
-
-###########################################################################
-class Scanner :
-    def __init__(self) :
-        self.ipTable=list()
-        self.networkDatabase=NetworkDatabase()
-        self.database=Database()
-
-    #查詢指定網域的所有資料
-    #如果最前面的元素有寫的話就是指定此區段搜尋,如果沒有的話就是預設全部
-    #有指定的情況下可以指定搜尋從哪裡到哪裡,分別是後面兩個元素
-    def scan(self, start=IP(1), end=IP(506)) :
-        lock=threading.Lock()
-        for ip in IP.range(start, end) :
-            ipData=IpData(ip)
-            ipData.networkDatabase=self.networkDatabase
-            self.ipTable.append(ipData)
-        for thread in self.ipTable :
-            thread.start()
-        for thread in self.ipTable :
-            thread.join()
-
 ##########################################################################
 class NetworkDatabase(object) :
     def __init__(self) :
@@ -600,6 +570,22 @@ class Database(object) :
     def __init__(self) :
         logging.debug('Database init')
 
+    #查詢指定網域的所有資料
+    #如果最前面的元素有寫的話就是指定此區段搜尋,如果沒有的話就是預設全部
+    #有指定的情況下可以指定搜尋從哪裡到哪裡,分別是後面兩個元素
+    def newIpSet(self, start=IP(1), end=IP(506)) :
+        for ip in IP.range(start, end) :
+            ipData=IpData(ip)
+            self.ipDict.update({ip : ipData})
+
+    def updateIpSet(self) :
+        for thread in self.ipDict.values() :
+            thread.networkDatabase=self.networkDatabase
+            thread.start()
+        for thread in self.ipDict.values() :
+            thread.join()
+
+    #def saveToSQL(self) :
 
     def save(self, ip, di) :
         message='\tip: '+ip.__str__()
@@ -687,6 +673,7 @@ def oldScan() :
     print ''
 
 if __name__=='__main__' :
-    scan=Scanner()
-    scan.scan()
+    database=Database()
+    database.newIpSet()
+    database.updateIpSet()
 
