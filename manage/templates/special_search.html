@@ -1,0 +1,45 @@
+<html>
+    <head>
+		<title>{% block title %}{% endblock %}</title>
+		<link rel="stylesheet" type="text/css" href="/static/css/style_table.css">
+	</head>
+	<body>
+		<center>
+			<form action="" method="post">
+			<table>
+				<tr>
+					<td> Ip </td>
+					<td> <input id="ip" type="text" name="ip" value={{ outIp }} > </td>
+				</tr>
+				<tr>
+					<td> Mac </td>
+					<td> <input id="mac" type="text" name="mac" value={{ outMac }} > </td>
+				</tr>
+					<td> Switch </td>
+					<td> {{ outSwitch }} </td>
+				</tr>
+				<tr>
+					<td> Port </td>
+					<td> {{ outPort }} </td>
+				<tr>
+					<td> Detail </td>
+					<td> {{ outDetail }} </td>
+				</tr>
+				<tr>
+					<td> Time </td>
+					<td> {{ ipSet.time }} </td>
+				</tr>
+				<tr>
+					<td colspan="2">
+						<input type="hidden" name="ok" value="yes">
+						<input type="submit" value="Search">
+					</td>
+				</tr>
+			</table>
+			</form>
+			{% for e in errors %}
+				<p> {{ e }} </p><br >
+			{% endfor %}
+		</center>
+	</body>
+</html>

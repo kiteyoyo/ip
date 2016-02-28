@@ -1,11 +1,14 @@
 # ip
 
+登入mysql:
+mysql -u root -p
+
+因為使用中文，所以再最初創建Database時就要使用utf-8，在此設定的database名為manage
+CREATE DATABASE <dbname> CHARACTER SET utf8;
+info from: https://docs.djangoproject.com/en/1.9/ref/databases/
+
 在setting裡可以給予基本設定
-如果有local就會看local的設定,否則就看setting的
-允許登入的mode有三種：
-allow:只有在列表上的可以登入
-deny:只有列表上的不可以登入
-mathip:只允許系館ip
+如果有database可以完全取得的話就使用database裡的, 否則就會使用local的設定, 但top_switch_ip都是看local的
 
 top_switch_ip:
 最頂端的switch

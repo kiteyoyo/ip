@@ -1,0 +1,20 @@
+<html>
+
+<head>
+<meta content="test/html ; charset=big5" http-equiv="Content-Type"
+<title></title>
+<link rel="stylesheet" type="text/css" href="/static/css/style_page1.css">
+</head>
+
+<body bgcolor=FFFFFF bgproperties=fixed topmargin=0 leftmargin=0 oncontextmenu='return false' ondragstart='return false' onselectstart='return false'>
+<center>
+
+<table width=100% border=0>
+	{% for s in set_list %}
+		<tr><td><a href={{ s.path }} target={{ s.target }}>{{ s.name }}</a></td></tr>
+	{% endfor %}
+</table>
+
+</center>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<html>
+	<head>
+		<title>{% block title %}{% endblock %}</title>
+		<link rel="stylesheet" type="text/css" href="/static/css/style_table.css">
+	</head>
+	<body>
+		<center>
+			{% for room in room_list %}
+				<table>
+					<caption> {{ room.name }} </caption>
+					<tr>
+						<th width="8%">Activity</td>
+						<th width="16%">IP</td>
+						<th width="18%">MAC</td>
+						<th width="16%">Switch</td>
+						<th width="8%">Port</td>
+						<th width="18%">Detail</td>
+						<th width="16%">Time</td>
+					</tr>
+					{% for ip in room.item %}
+					<tr>
+						{% if ip.activity %}
+						<td><img src="/static/image/activityTrue.png" alt='True' /></td>
+						<td> {{ ip.ip }} </td>
+						<td> {{ ip.get_mac }} </td>
+						<td> {{ ip.get_switch }} </td>
+						<td> {{ ip.get_port }} </td>
+						<td> {{ ip.get_detail }} </td>
+						{% else %}
+						<td><img src="/static/image/activityFalse.png" alt='False' /></td>
+						<td> {{ ip.ip }} </td>
+						<td></td>
+						<td></td>
+						<td></td>
+						<td></td>
+						{% endif %}	
+						<td> {{ ip.time|date:'Y-m-d' }} <br> {{ ip.time|date:'H:i:s' }} </td>
+					</tr>
+					{% empty %}
+					<tr><td colspan="7"><p>This room is not allocated IP.</p</td></tr>
+					{% endfor %}
+				</table>
+			{% endfor %}
+		</center>
+	</body>
+</html>

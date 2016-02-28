@@ -1,0 +1,32 @@
+<html>
+
+<head>
+<meta content="test/html ; charset=big5" http-equiv="Content-Type"
+<title></title>
+<link rel="stylesheet" type="text/css" href="/static/css/style_page1.css">
+</head>
+
+<body nLoad="preload()">
+<script src="/static/javascript/JS.js"></script>
+
+<p align="left">
+{% for s in set_list %}
+	<span id= {{ s.getMenu }} onClick="showhide(  {{ s.getOutline }}  , {{ s.getSign }} )" style="cursor:hand; font-Family:Verdana; text-decoration:underline; font-weight:bold">
+		<font style="text-decoration:none">
+			<img id= {{ s.getSign }}  src="24.png" width="12" height="11"> 
+		</font>
+	</span>
+	<a href={{ s.path }} target=page2> {{ s.name }} </a>
+	<br>
+	<span id= {{s.getOutline }}  style="display:'none'">
+		<br>
+		{% for i in s.items %}
+			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+			<a href="#" target="_self"> {{ i }} </a><br>
+		{% endfor %}
+	</span>
+{% endfor %}
+</p>
+
+</body>
+</html>

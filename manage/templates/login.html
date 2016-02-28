@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<head>
+<meta content="test/html ; charset=big5" http-equiv="Content-Type"
+<title>LOGIN</title>
+
+<link rel="stylesheet" type="text/css" href="/static/css/style_login.css" />
+</head>
+
+<body>
+<div class="container">
+	<section id="content">
+		<form action="/accounts/login/" method="post">
+			<h1>Login</h1>
+			<div>
+				<input type="text" name="username" aplaceholder="Username" required="" id="username" />
+			</div>
+			<div>
+				<input type="password" name="password" placeholder="Password" required="" id="password" />
+			</div>
+			<div>
+				<input type="submit" value="Log in" />
+			</div>
+		</form><!-- form -->
+		<div id="bottom">
+			<p>login to MCL</p>
+		</div><!-- bottom -->
+	</section><!-- content -->
+</div><!-- container -->
+</body>
+</html>
+

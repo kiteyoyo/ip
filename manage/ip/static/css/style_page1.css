@@ -1,0 +1,39 @@
+@charset "big5";
+
+* {
+      margin:0;
+      padding:0;
+}
+
+body {
+       background: white;  
+       font-family:"華康竹風體W4",sans-serif;
+       font-size:12pt;  
+       color: #5A6466;
+}
+
+p {
+
+	margin-bottom: 1.5em;
+
+}
+
+td {
+
+	margin-bottom: 1.5em;
+        font-family:"華康竹風體W4",sans-serif;
+        font-size:12pt;  
+        color: #5A6466;	
+}
+
+a {
+	text-decoration: none;
+}
+
+a:link 	{color: #5A6466;}
+a:visited      {color: #5A6466;}
+a:active       {color: #5A6466;}
+a:hover        {color: #5A6466;}
+
+scrollbar-face-color: #D3D3D3;scrollbar-highlight-color: #FFFFFF;scrollbar-shadow-color: #D3D3D3;scrollbar-3dlight-color: #555555;scrollbar-arrow-color:  #555555;scrollbar-track-color: #FFFFFF;scrollbar-darkshadow-color: #444444;
+}

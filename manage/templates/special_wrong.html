@@ -1,0 +1,36 @@
+<html>
+<head>
+<title>Wrong IP</title>
+<link rel="stylesheet" type="text/css" href="/static/css/style_table.css">
+</head>
+<body>
+<center>
+	<table>
+		<tr>
+			<td style="background-color:yellow"><p><font color="#FF0000">red</font> is NOW</p></td>
+			<td style="background-color:yellow"><p><font color="#00008B">blue</font> is default</p></td>
+		</tr>
+	</table>
+	<table>
+		<tr>
+			<th width="16%">IP</td>
+			<th width="18%">Mac</td>
+			<th width="16%">Switch</td>
+			<th width="8%">Port</td>
+			<th width="15%">Detail</td>
+			<th width="16%">Time</td>
+		</tr>
+		{% for ip in wrong_ip %}
+			<tr>
+				<td> {{ ip.ip }} </td>
+				<td> {{ ip.getMac }} </td>
+				<td><font color="#FF0000"> {{ ip.get_default_switch }} </font><br> {{ ip.get_switch }} </td>
+				<td><font color="#FF0000"> {{ ip.get_default_port }} </font><br> {{ ip.get_port }} </td>
+				<td><font color="#FF0000"> {{ ip.get_room }} </font><br> {{ ip.get_detail }} </td>
+				<td> {{ ip.time|date:'Y-m-d H:i:s' }} </td>
+			</tr>
+		{% endfor %}
+	</table>
+</center>
+</body>
+</html>

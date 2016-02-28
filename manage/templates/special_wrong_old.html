@@ -1,0 +1,23 @@
+{% extends 'typicalTable.html' %}
+
+{% block title %}ip_26 table{% endblock %}
+{% block table %}
+<tr>
+	<th width="16%">IP</td>
+	<th width="18%">Mac</td>
+	<th width="16%">Switch</td>
+	<th width="8%">Port</td>
+	<th width="15%">Detail</td>
+	<th width="16%">Time</td>
+</tr>
+{% for ip in wrong_ip %}
+	<tr>
+		<td> {{ ip.ip }} </td>
+		<td> {{ ip.getMac }} </td>
+		<td><font color="#FF0000"> {{ ip.getDefaultSwitch }} </font><br> {{ ip.getSwitch }} </td>
+		<td><font color="#FF0000"> {{ ip.getDefaultPort }} </font><br> {{ ip.getPort }} </td>
+		<td><font color="#FF0000"> {{ ip.getRoom }} </font><br> {{ ip.getDetail }} </td>
+		<td> {{ ip.time|date:'Y-m-d H:i:s' }} </td>
+	</tr>
+{% endfor %}
+{% endblock %}

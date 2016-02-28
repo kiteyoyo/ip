@@ -1,0 +1,55 @@
+﻿<html>
+<head>
+<title>MCL</title>
+<meta content="test/html ; charset=big5" http-equiv="Content-Type"
+<title>&nbsp&nbspMathematics Computer Laboratory  </title>
+<meta name="title" content="" />
+<meta name="auther" content="" />
+<meta name="subject" content="" />
+
+<link rel="stylesheet" type="text/css" href="/static/css/style_frame.css">
+
+</head>
+
+<body>
+   	<div id="wrapper">
+      	<div id="header">
+        	<div id="name">
+        		<h1>
+                	Mathematics<br />
+                	Computer<br />
+					Laboratory<br />
+            	</h1>
+        	</div>
+			<div id="login">
+				<ul>
+					{% if request.user.is_authenticated %}
+					<li>{{ request.user }}({{ ip }}) is login</li>
+					{% endif %}
+					<a href="/accounts/logout/"><li>logout</li></a>
+				</ul>
+			</div>
+         	<div id="menu">
+               	<ul>
+				   	<a href="/site/" target="page1"><li class="first sction">site</li></a>
+		  			<a href="/switch/" target="page1"><li>switch</li></a>
+                	<a href="/ip/" target="page1"><li>IP</li></a>
+					<a href="/special/" target="page1"><li>special</li></a>
+					{% if management %}
+						<a href="/management/" target="page1"><li class="last">management</li></a>
+					{% endif %}
+              	</ul>
+         	</div>
+      	</div>
+      	<div id="page">
+         	<table  width=100% border=0><tr>
+				<td width=15% align=center><iframe frameborder=0 width=100% height=550 marginheight=0 marginwidth=0 name=page1 scrolling=yes src={{ page1 }}></iframe></td>
+				<td width=85% align=center><iframe frameborder=0 width=100% height=550 marginheight=0 marginwidth=0 name=page2 scrolling=yes src={{ page2 }}></iframe></td>
+	 		</tr></table>
+      	</div>
+      	<div id="footer">
+	  		<img src="/static/image/example.jpg" alt="Hi" />
+      	</div>
+   	</div>
+</body>
+</html>

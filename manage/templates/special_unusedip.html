@@ -1,0 +1,43 @@
+<html>
+	<head>
+	<title></title>
+		<link rel="stylesheet" type="text/css" href="/static/css/style_table.css">
+	</head>
+<body>
+	<center>
+		<table>
+<tr valign="top">
+<td bgcolor="#F0F8FF"><table>
+	<caption>25 Area</caption>
+	<tr>
+		<th>Ip</td>
+		<th>Time</td>
+	</tr>
+	{% for ip in ip_list_25 %}
+		<tr>
+			<td> {{ ip.ip }} </td>
+			<td> {{ ip.time }} </td>
+		</tr>
+	{% empty %}
+		<tr><td><p>empty</p></td></tr>
+	{% endfor %}
+</table></td>
+<td bgcolor="#F0F8FF"><table>
+	<caption>26 Area</caption>
+	<tr>
+		<th>IP</td>
+		<th>Time</td>
+	</tr>
+	{% for ip in ip_list_26 %}
+		<tr>
+			<td> {{ ip.ip }} </td>
+			<td> {{ ip.time }} </td>
+		</tr>
+	{% empty %}
+		<tr><td><p>empty</p></td></tr>
+	{% endfor %}
+</table></td>
+</tr>
+		</table>
+	</center>
+</body>

@@ -1,0 +1,44 @@
+{% extends 'typicalTable.html' %}
+
+{% block title %}ip_26 table{% endblock %}
+{% block table %}
+<tr>
+	<th width="8%">Activity</td>
+	<th width="16%">IP</td>
+	<th width="18%">Mac</td>
+	<th width="16%">Switch</td>
+	<th width="8%">Port</td>
+	<th width="18%">Detail</td>
+	<th width="16%">Time</td>
+	<th>Site</th>
+	<th>Hostname</th>
+	<th>Purpose</th>
+	<th>Admin</th>
+	<th>Comment</th>
+</tr>
+{% for ip in ip_list %}
+	<tr>
+		{% if ip.activity %}
+			<td><img src="/static/image/activityTrue.png" alt='True' /></td>
+			<td><font size="2"> {{ ip.ip }} </font></td>
+			<td><font size="2"> {{ ip.get_mac }} </font></td>
+			<td><font size="2"> {{ ip.get_switch }} </font></td>
+			<td><font size="2"> {{ ip.get_port }} </font></td>
+			<td><font size="2"> {{ ip.get_detail }} </font></td>
+		{% else %}
+			<td><img src="/static/image/activityFalse.png" alt='False' /></td>
+			<td><font size="2"> {{ ip.ip }} </td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+		{% endif %}	
+		<td><font size="2"> {{ ip.site }} </font></td>
+		<td><font size="2"> {{ ip.hostname }} </font></td>
+		<td><font size="2"> {{ ip.purpose }} </font></td>
+		<td><font size="2"> {{ ip.admin }} </font></td>
+		<td><font size="2"> {{ ip.comment }} </font></td>
+		<td><font size="2"> {{ ip.time|date:'Y-m-d H:i:s' }} </font></td>
+	</tr>
+{% endfor %}
+{% endblock %}

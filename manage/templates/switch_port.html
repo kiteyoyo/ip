@@ -1,0 +1,22 @@
+<html>
+<head>
+	<title>{{ title }}</title>
+	<link rel="stylesheet" type="text/css" href="/static/css/style_table.css">
+</head>
+<body>
+<center><h2>{{ title }}<h2></center>
+	<table>
+		<tr>
+			<td><h4>Port<h4></td>
+			<td><h4>Label<h4></td>
+			<td><h4>Info<h4></td>
+		</tr>
+		{% for port in port_list %}
+			<tr>
+					<td>{{ port.port }}</td>
+				<td>{{ port.label }}</td>
+				<td>{{ port.info }}</td>
+			</tr>
+		{% endfor %}
+	</table>
+</body>
